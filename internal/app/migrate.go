@@ -25,7 +25,7 @@ func Migrate(databaseURL string) {
 	)
 
 	for attempts > 0 {
-		m, err = migrate.New("file://migrations", "postgres://"+databaseURL+"?sslmode=disable")
+		m, err = migrate.New("file://migrations", databaseURL)
 		if err == nil {
 			break
 		}
@@ -58,5 +58,5 @@ func init() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
-	Migrate(config.Cfg.DSN)
+	Migrate(config.Cfg.Postgres.DSN)
 }

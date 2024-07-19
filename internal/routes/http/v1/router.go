@@ -16,11 +16,9 @@ func NewRouter(handler *echo.Echo, services *service.Services) {
 	}))
 	handler.Use(middleware.Recover())
 
-	handler.GET("/health", func(c echo.Context) error { return c.NoContent(200) })
-
 	v1 := handler.Group("/api/v1")
 	{
-		newMessageRoutes(v1.Group("/accounts"), services.Message)
+		NewMessageRoutes(v1.Group("/messages"), services.Message)
 
 	}
 }

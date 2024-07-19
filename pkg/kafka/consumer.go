@@ -15,7 +15,7 @@ type KafkaConsumer struct {
 
 func NewKafkaConsumer(brokers, groupID, topic string) (*KafkaConsumer, error) {
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": brokers,
+		"bootstrap.servers": "localhost",
 		"group.id":          groupID,
 		"auto.offset.reset": "earliest",
 	})
@@ -54,4 +54,8 @@ func (kc *KafkaConsumer) Consume(ctx context.Context) {
 	}
 
 	kc.consumer.Close()
+}
+
+func (kc *KafkaConsumer) Close() error {
+	return kc.consumer.Close()
 }

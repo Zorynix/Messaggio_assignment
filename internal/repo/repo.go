@@ -5,12 +5,16 @@ import (
 	"messagio_testsuite/internal/entity"
 	"messagio_testsuite/internal/repo/pgdb"
 	"messagio_testsuite/pkg/postgres"
+
+	"github.com/google/uuid"
 )
 
 type Message interface {
-	CreateMessage(ctx context.Context) (int, error)
-	GetMessageById(ctx context.Context, id int) (entity.Message, error)
+	CreateMessage(ctx context.Context, message entity.Message) (uuid.UUID, error)
+	GetMessageById(ctx context.Context, id uuid.UUID) (entity.Message, error)
 	GetMessages(ctx context.Context) ([]entity.Message, error)
+	MarkMessageAsProcessed(ctx context.Context, id uuid.UUID) error
+	GetProcessedMessagesStats(ctx context.Context) (int, error)
 }
 
 type Repositories struct {

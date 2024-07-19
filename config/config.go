@@ -7,10 +7,15 @@ import (
 )
 
 type Config struct {
-	DSN      string `mapstructure:"dsn"`
-	LogLevel string `mapstructure:"log_level"`
-	Server   Server `mapstructure:"server"`
-	Kafka    Kafka  `mapstructure:"kafka"`
+	Postgres Postgres `mapstructure:"postgres"`
+	LogLevel string   `mapstructure:"log_level"`
+	Server   Server   `mapstructure:"server"`
+	Kafka    Kafka    `mapstructure:"kafka"`
+}
+
+type Postgres struct {
+	DSN         string `mapstructure:"dsn"`
+	MaxPoolSize int    `mapstructure:"max_pool_size"`
 }
 
 type Server struct {

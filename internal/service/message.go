@@ -10,18 +10,25 @@ import (
 	"messagio_testsuite/pkg/kafka"
 
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 type MessageService struct {
 	messageRepo   repo.Message
 	kafkaProducer *kafka.KafkaProducer
+	kafkaConsumer *kafka.KafkaConsumer
 }
 
-func NewMessageService(messageRepo repo.Message, kafkaProducer *kafka.KafkaProducer) *MessageService {
-	return &MessageService{
+func NewMessageService(messageRepo repo.Message, kafkaProducer *kafka.KafkaProducer, kafkaConsumer *kafka.KafkaConsumer) *MessageService {
+	s := &MessageService{
 		messageRepo:   messageRepo,
 		kafkaProducer: kafkaProducer,
+		kafkaConsumer: kafkaConsumer,
 	}
+
+	go s.listenForProcessedMessages()
+
+	return s
 }
 
 func (s *MessageService) CreateMessage(ctx context.Context, content string) (uuid.UUID, error) {
@@ -57,10 +64,41 @@ func (s *MessageService) GetMessages(ctx context.Context) ([]entity.Message, err
 	return s.messageRepo.GetMessages(ctx)
 }
 
+func (s *MessageService) GetMessageByContent(ctx context.Context, content string) (entity.Message, error) {
+	message, err := s.messageRepo.GetMessageByContent(ctx, content)
+	if err != nil {
+		if errors.Is(err, repoerrs.ErrNotFound) {
+			return entity.Message{}, serviceerrs.ErrMessageNotFound
+		}
+		return entity.Message{}, err
+	}
+	return message, nil
+}
+
 func (s *MessageService) MarkMessageAsProcessed(ctx context.Context, messageId uuid.UUID) error {
 	return s.messageRepo.MarkMessageAsProcessed(ctx, messageId)
 }
 
 func (s *MessageService) GetProcessedMessagesStats(ctx context.Context) (int, error) {
 	return s.messageRepo.GetProcessedMessagesStats(ctx)
+}
+
+func (s *MessageService) listenForProcessedMessages() {
+	ctx := context.Background()
+	s.kafkaConsumer.Consume(ctx, s.handleMessage)
+}
+
+func (s *MessageService) handleMessage(ctx context.Context, messageContent string) {
+	message, err := s.GetMessageByContent(ctx, messageContent)
+	if err != nil {
+		logrus.Errorf("Failed to get message by content: %v", err)
+		return
+	}
+
+	err = s.MarkMessageAsProcessed(ctx, message.ID)
+	if err != nil {
+		logrus.Errorf("Failed to mark message %s as processed: %v", message.ID, err)
+	} else {
+		logrus.Infof("Message %s marked as processed", message.ID)
+	}
 }

@@ -30,6 +30,7 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 }
 
 func Run(configPath string) {
+
 	err := config.LoadConfig(configPath)
 	if err != nil {
 		logrus.Fatalf("failed to load config: %v", err)
@@ -59,16 +60,17 @@ func Run(configPath string) {
 	services := service.NewServices(service.ServicesDependencies{
 		Repos:         &repo.Repositories{Message: messageRepo},
 		KafkaProducer: kafkaProducer,
+		KafkaConsumer: kafkaConsumer,
 	})
 
 	e := echo.New()
-	// e.Logger.SetLevel(log.DEBUG)
-	// e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-	// 	Format: "method=${method}, uri=${uri}, status=${status}\n",
-	// }))
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Validator = &CustomValidator{validator: validator.New()}
+
+	e.GET("/health", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "all systems operational"})
+	})
 
 	v1.NewMessageRoutes(e.Group("/api/v1"), services.Message)
 
@@ -87,6 +89,7 @@ func Run(configPath string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
 	if err := e.Shutdown(ctx); err != nil {
 		logrus.Fatalf("Server forced to shutdown: %v", err)
 	}

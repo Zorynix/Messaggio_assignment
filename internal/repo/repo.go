@@ -15,6 +15,7 @@ type Message interface {
 	GetMessages(ctx context.Context) ([]entity.Message, error)
 	MarkMessageAsProcessed(ctx context.Context, id uuid.UUID) error
 	GetProcessedMessagesStats(ctx context.Context) (int, error)
+	GetMessageByContent(ctx context.Context, content string) (entity.Message, error)
 }
 
 type Repositories struct {

@@ -3,7 +3,7 @@ package entity
 import (
 	"time"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 )
 
 type Message struct {

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type KafkaConsumer struct {
@@ -34,21 +34,28 @@ func NewKafkaConsumer(brokers, groupID, topic string) (*KafkaConsumer, error) {
 	}, nil
 }
 
-func (kc *KafkaConsumer) Consume(ctx context.Context) {
+func (kc *KafkaConsumer) Consume(ctx context.Context, handler func(ctx context.Context, message string)) {
 	run := true
-
 	for run {
 		select {
 		case <-ctx.Done():
 			run = false
 		default:
-			msg, err := kc.consumer.ReadMessage(time.Second)
-			if err == nil {
-				log.Infof("Message on %s: %s", msg.TopicPartition, string(msg.Value))
-			} else if err.(kafka.Error).IsTimeout() {
-				log.Debugf("Consumer timeout: %v", err)
+			msg, err := kc.consumer.ReadMessage(time.Hour)
+			if err != nil {
+				if kafkaErr, ok := err.(kafka.Error); ok && kafkaErr.IsTimeout() {
+					logrus.Debugf("Consumer timeout: %v", err)
+					continue
+				}
+				logrus.Errorf("Consumer error: %v", err)
+				continue
+			}
+
+			if msg != nil && msg.Value != nil {
+				message := string(msg.Value)
+				handler(ctx, message)
 			} else {
-				log.Errorf("Consumer error: %v (%v)", err, msg)
+				logrus.Warn("Received an empty message or nil value")
 			}
 		}
 	}

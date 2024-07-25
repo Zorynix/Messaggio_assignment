@@ -1,0 +1,21 @@
+app:
+  name: "MessaggioAssignment"
+  version: "1.0.0"
+
+server:
+  port: ":8888"
+
+log:
+  level: "info"
+
+postgres:
+  max_pool_size: 20
+  conn_attempts: 10
+  conn_timeout: 5s
+
+kafka:
+  brokers: 
+    - "kafka:9092"
+    # - "localhost:9092" locally
+  topic: "messages"
+  group_id: "messaggio_group"

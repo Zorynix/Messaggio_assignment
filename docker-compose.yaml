@@ -13,30 +13,43 @@ services:
       - "5432:5432"
     restart: unless-stopped
 
-  kafdrop:
-    image: obsidiandynamics/kafdrop
-    restart: "no"
-    ports:
-      - "9000:9000"
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
     environment:
-      KAFKA_BROKERCONNECT: "kafka:29092"
-    depends_on:
-      - "kafka"
-  kafka:
-    image: obsidiandynamics/kafka
-    restart: "no"
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
-      - "9092:9092"
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
     environment:
-      KAFKA_LISTENERS: "INTERNAL://:29092,EXTERNAL://:9092"
-      KAFKA_ADVERTISED_LISTENERS: "INTERNAL://kafka:29092,EXTERNAL://localhost:9092"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
-      KAFKA_INTER_BROKER_LISTENER_NAME: "EXTERNAL"
-      KAFKA_ZOOKEEPER_SESSION_TIMEOUT: "6000"
-      KAFKA_RESTART_ATTEMPTS: "10"
-      KAFKA_RESTART_DELAY: "5"
-      ZOOKEEPER_AUTOPURGE_PURGE_INTERVAL: "0"
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    ports:
+      - "29092:29092"
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    restart: unless-stopped
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    container_name: kafdrop
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+    ports:
+      - "9000:9000"
+    depends_on:
+      - kafka
+    restart: unless-stopped
 
   app:
     container_name: app
@@ -54,5 +67,3 @@ services:
 
 volumes:
   pg-data:
-
-

@@ -2,9 +2,8 @@ package app
 
 import (
 	"errors"
+	"os"
 	"time"
-
-	"messagio_testsuite/config"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -17,7 +16,12 @@ const (
 	defaultTimeout  = time.Second
 )
 
-func Migrate(databaseURL string) {
+func init() {
+	databaseURL, ok := os.LookupEnv("PG_URL")
+	if !ok || len(databaseURL) == 0 {
+		log.Fatalf("migrate: environment variable not declared: PG_URL")
+	}
+
 	var (
 		attempts = defaultAttempts
 		err      error
@@ -30,13 +34,13 @@ func Migrate(databaseURL string) {
 			break
 		}
 
-		log.Printf("Migrate: PostgreSQL is trying to connect, attempts left: %d", attempts)
+		log.Printf("Migrate: pgdb is trying to connect, attempts left: %d", attempts)
 		time.Sleep(defaultTimeout)
 		attempts--
 	}
 
 	if err != nil {
-		log.Fatalf("Migrate: PostgreSQL connect error: %s", err)
+		log.Fatalf("Migrate: pgdb connect error: %s", err)
 	}
 
 	err = m.Up()
@@ -51,12 +55,4 @@ func Migrate(databaseURL string) {
 	}
 
 	log.Printf("Migrate: up success")
-}
-
-func init() {
-	err := config.LoadConfig("config/config.yaml")
-	if err != nil {
-		log.Fatalf("failed to load config: %v", err)
-	}
-	Migrate(config.Cfg.Postgres.DSN)
 }

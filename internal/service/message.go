@@ -41,7 +41,7 @@ func (s *MessageService) CreateMessage(ctx context.Context, content string) (uui
 		return uuid.Nil, serviceerrs.ErrCannotCreateMessage
 	}
 
-	err = s.kafkaProducer.Produce(content)
+	err = s.kafkaProducer.Produce(ctx, content)
 	if err != nil {
 		return uuid.Nil, serviceerrs.ErrCannotProduceMessage
 	}

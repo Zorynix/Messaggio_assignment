@@ -1,53 +1,43 @@
 package kafka
 
 import (
-	"fmt"
+	"context"
 
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
-	log "github.com/sirupsen/logrus"
+	"github.com/segmentio/kafka-go"
+	"github.com/sirupsen/logrus"
 )
 
 type KafkaProducer struct {
-	producer *kafka.Producer
-	topic    string
+	writer *kafka.Writer
 }
 
-func NewKafkaProducer(brokers string, topic string) (*KafkaProducer, error) {
-	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "localhost"})
-	if err != nil {
-		return nil, err
-	}
-
+func NewKafkaProducer(brokers []string, topic string) *KafkaProducer {
+	w := kafka.NewWriter(kafka.WriterConfig{
+		Brokers:  brokers,
+		Topic:    topic,
+		Balancer: &kafka.LeastBytes{},
+	})
 	return &KafkaProducer{
-		producer: p,
-		topic:    topic,
-	}, nil
+		writer: w,
+	}
 }
 
-func (kp *KafkaProducer) Produce(message string) error {
-	deliveryChan := make(chan kafka.Event, 1)
-	defer close(deliveryChan)
-
-	err := kp.producer.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{Topic: &kp.topic, Partition: kafka.PartitionAny},
-		Value:          []byte(message),
-	}, deliveryChan)
+func (kp *KafkaProducer) Produce(ctx context.Context, message string) error {
+	err := kp.writer.WriteMessages(ctx,
+		kafka.Message{
+			Value: []byte(message),
+		},
+	)
 	if err != nil {
+		logrus.Errorf("Failed to produce message: %v", err)
 		return err
 	}
-
-	e := <-deliveryChan
-	msg, ok := e.(*kafka.Message)
-	if !ok {
-		return fmt.Errorf("unexpected event type %T", e)
-	}
-	if msg.TopicPartition.Error != nil {
-		return msg.TopicPartition.Error
-	}
-	log.Infof("Message delivered to %v", msg.TopicPartition)
+	logrus.Infof("Message delivered to topic %v", kp.writer.Stats().Topic)
 	return nil
 }
 
 func (kp *KafkaProducer) Close() {
-	kp.producer.Close()
+	if err := kp.writer.Close(); err != nil {
+		logrus.Errorf("Failed to close producer: %v", err)
+	}
 }

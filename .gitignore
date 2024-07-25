@@ -9,8 +9,6 @@
 *.so
 *.dylib
 .env
-.yaml
-*.yaml
 .air.toml
 .air
 tmp
@@ -29,6 +27,3 @@ tmp
 # Go workspace file
 go.work
 go.work.sum
-
-# Configuration files
-config/config.yaml

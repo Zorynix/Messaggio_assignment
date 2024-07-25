@@ -24,10 +24,11 @@ type Services struct {
 type ServicesDependencies struct {
 	Repos         *repo.Repositories
 	KafkaProducer *kafka.KafkaProducer
+	KafkaConsumer *kafka.KafkaConsumer
 }
 
 func NewServices(deps ServicesDependencies) *Services {
 	return &Services{
-		Message: NewMessageService(deps.Repos.Message, deps.KafkaProducer),
+		Message: NewMessageService(deps.Repos.Message, deps.KafkaProducer, deps.KafkaConsumer),
 	}
 }

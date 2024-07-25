@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"messagio_testsuite/config"
 	"messagio_testsuite/internal/repo"
 	"messagio_testsuite/internal/repo/pgdb"
@@ -30,49 +31,52 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 }
 
 func Run(configPath string) {
-	err := config.LoadConfig(configPath)
-	if err != nil {
-		logrus.Fatalf("failed to load config: %v", err)
-	}
-	SetLogrus(config.Cfg.LogLevel)
 
-	pg, err := postgres.New(config.Cfg.Postgres.DSN, postgres.MaxPoolSize(config.Cfg.Postgres.MaxPoolSize))
+	cfg, err := config.NewConfig(configPath)
 	if err != nil {
-		logrus.Fatalf("Failed to initialize PostgreSQL: %v", err)
+		logrus.Fatalf("Config error: %s", err)
+	}
+
+	SetLogrus(cfg.Log.Level)
+
+	pg, err := postgres.New(cfg.PG.URL, postgres.MaxPoolSize(cfg.PG.MaxPoolSize))
+	if err != nil {
+		logrus.Fatal(fmt.Errorf("app - Run - pgdb.NewServices: %w", err))
 	}
 	defer pg.Close()
 
-	kafkaProducer, err := kafka.NewKafkaProducer(config.Cfg.Kafka.Brokers, config.Cfg.Kafka.Topic)
-	if err != nil {
-		logrus.Fatalf("Failed to initialize Kafka producer: %v", err)
-	}
-	defer kafkaProducer.Close()
-
-	kafkaConsumer, err := kafka.NewKafkaConsumer(config.Cfg.Kafka.Brokers, config.Cfg.Kafka.GroupID, config.Cfg.Kafka.Topic)
+	consumer := kafka.NewKafkaConsumer(cfg.Kafka.Brokers, cfg.Kafka.GroupID, cfg.Kafka.Topic)
 	if err != nil {
 		logrus.Fatalf("Failed to initialize Kafka consumer: %v", err)
 	}
-	defer kafkaConsumer.Close()
+	defer consumer.Close()
+
+	producer := kafka.NewKafkaProducer(cfg.Kafka.Brokers, cfg.Kafka.Topic)
+	if err != nil {
+		logrus.Fatalf("Failed to initialize Kafka producer: %v", err)
+	}
+	defer producer.Close()
 
 	messageRepo := pgdb.NewMessageRepo(pg)
 
 	services := service.NewServices(service.ServicesDependencies{
 		Repos:         &repo.Repositories{Message: messageRepo},
-		KafkaProducer: kafkaProducer,
+		KafkaProducer: producer,
+		KafkaConsumer: consumer,
 	})
 
 	e := echo.New()
-	// e.Logger.SetLevel(log.DEBUG)
-	// e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-	// 	Format: "method=${method}, uri=${uri}, status=${status}\n",
-	// }))
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Validator = &CustomValidator{validator: validator.New()}
 
+	e.GET("/health", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "all systems operational"})
+	})
+
 	v1.NewMessageRoutes(e.Group("/api/v1"), services.Message)
 
-	addr := config.Cfg.Server.Address
+	addr := cfg.Server.Port
 	logrus.Infof("Starting server on %s...", addr)
 	go func() {
 		if err := e.Start(addr); err != nil && err != http.ErrServerClosed {
@@ -87,6 +91,7 @@ func Run(configPath string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
 	if err := e.Shutdown(ctx); err != nil {
 		logrus.Fatalf("Server forced to shutdown: %v", err)
 	}

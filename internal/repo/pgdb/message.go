@@ -94,3 +94,16 @@ func (r *MessageRepo) GetProcessedMessagesStats(ctx context.Context) (int, error
 	err := r.Pool.QueryRow(ctx, query).Scan(&count)
 	return count, err
 }
+
+func (r *MessageRepo) GetMessageByContent(ctx context.Context, content string) (entity.Message, error) {
+	query := "SELECT id, message, created_at, processed, processed_at FROM messaggio.messages WHERE message = $1"
+	var message entity.Message
+	err := r.Pool.QueryRow(ctx, query, content).Scan(&message.ID, &message.Message, &message.CreatedAt, &message.Processed, &message.ProcessedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.Message{}, repoerrs.ErrNotFound
+		}
+		return entity.Message{}, err
+	}
+	return message, nil
+}

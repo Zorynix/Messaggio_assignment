@@ -16,5 +16,6 @@ postgres:
 kafka:
   brokers: 
     - "kafka:9092"
+    # - "localhost:9092" locally
   topic: "messages"
   group_id: "messaggio_group"

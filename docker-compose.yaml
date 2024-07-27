@@ -6,7 +6,8 @@ services:
     image: postgres
     volumes:
       - pg-data:/var/lib/postgresql/data
-      - ./migrations/000001_messages.up.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./migrations/create_db.sql:/docker-entrypoint-initdb.d/1_create_db.sql
+      - ./migrations/init.sql:/docker-entrypoint-initdb.d/2_init.sql
     env_file:
       - .env
     ports:

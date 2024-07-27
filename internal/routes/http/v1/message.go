@@ -10,23 +10,23 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type messageRoutes struct {
-	messageService service.Message
+type MessageRoutes struct {
+	MessageService service.Message
 }
 
-func NewMessageRoutes(g *echo.Group, messageService service.Message) {
-	r := &messageRoutes{
-		messageService: messageService,
+func NewMessageRoutes(g *echo.Group, MessageService service.Message) {
+	r := &MessageRoutes{
+		MessageService: MessageService,
 	}
 
-	g.POST("/create", r.create)
-	g.GET("/messages", r.getAll)
-	g.GET("/messages/:id", r.getByID)
-	g.GET("/messages/stats", r.getStats)
-	g.PUT("/messages/:id/process", r.markAsProcessed)
+	g.POST("/create", r.Create)
+	g.GET("/messages", r.GetAll)
+	g.GET("/messages/:id", r.GetByID)
+	g.GET("/messages/stats", r.GetStats)
+	g.PUT("/messages/:id/process", r.MarkAsProcessed)
 }
 
-func (r *messageRoutes) create(c echo.Context) error {
+func (r *MessageRoutes) Create(c echo.Context) error {
 	type request struct {
 		Message string `json:"message" validate:"required"`
 	}
@@ -41,7 +41,7 @@ func (r *messageRoutes) create(c echo.Context) error {
 		return err
 	}
 
-	id, err := r.messageService.CreateMessage(c.Request().Context(), req.Message)
+	id, err := r.MessageService.CreateMessage(c.Request().Context(), req.Message)
 	if err != nil {
 		routeerrs.NewErrorResponse(c, http.StatusInternalServerError, "internal server error")
 		return err
@@ -55,8 +55,8 @@ func (r *messageRoutes) create(c echo.Context) error {
 	})
 }
 
-func (r *messageRoutes) getAll(c echo.Context) error {
-	messages, err := r.messageService.GetMessages(c.Request().Context())
+func (r *MessageRoutes) GetAll(c echo.Context) error {
+	messages, err := r.MessageService.GetMessages(c.Request().Context())
 	if err != nil {
 		routeerrs.NewErrorResponse(c, http.StatusInternalServerError, "internal server error")
 		return err
@@ -65,7 +65,7 @@ func (r *messageRoutes) getAll(c echo.Context) error {
 	return c.JSON(http.StatusOK, messages)
 }
 
-func (r *messageRoutes) getByID(c echo.Context) error {
+func (r *MessageRoutes) GetByID(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -73,10 +73,10 @@ func (r *messageRoutes) getByID(c echo.Context) error {
 		return err
 	}
 
-	message, err := r.messageService.GetMessageById(c.Request().Context(), id)
+	message, err := r.MessageService.GetMessageById(c.Request().Context(), id)
 	if err != nil {
 		if err == serviceerrs.ErrMessageNotFound {
-			routeerrs.NewErrorResponse(c, http.StatusNotFound, err.Error())
+			routeerrs.NewErrorResponse(c, http.StatusNotFound, "message not found")
 			return err
 		}
 		routeerrs.NewErrorResponse(c, http.StatusInternalServerError, "internal server error")
@@ -86,8 +86,8 @@ func (r *messageRoutes) getByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, message)
 }
 
-func (r *messageRoutes) getStats(c echo.Context) error {
-	count, err := r.messageService.GetProcessedMessagesStats(c.Request().Context())
+func (r *MessageRoutes) GetStats(c echo.Context) error {
+	count, err := r.MessageService.GetProcessedMessagesStats(c.Request().Context())
 	if err != nil {
 		routeerrs.NewErrorResponse(c, http.StatusInternalServerError, "internal server error")
 		return err
@@ -102,7 +102,7 @@ func (r *messageRoutes) getStats(c echo.Context) error {
 	})
 }
 
-func (r *messageRoutes) markAsProcessed(c echo.Context) error {
+func (r *MessageRoutes) MarkAsProcessed(c echo.Context) error {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
 	if err != nil {
@@ -110,7 +110,7 @@ func (r *messageRoutes) markAsProcessed(c echo.Context) error {
 		return err
 	}
 
-	err = r.messageService.MarkMessageAsProcessed(c.Request().Context(), id)
+	err = r.MessageService.MarkMessageAsProcessed(c.Request().Context(), id)
 	if err != nil {
 		if err == serviceerrs.ErrMessageNotFound {
 			routeerrs.NewErrorResponse(c, http.StatusNotFound, err.Error())

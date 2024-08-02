@@ -10,9 +10,16 @@ services:
       - ./migrations/init.sql:/docker-entrypoint-initdb.d/2_init.sql
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "db_prod"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
     ports:
       - "5432:5432"
-    restart: unless-stopped
+    user: postgres
+    restart: always
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest

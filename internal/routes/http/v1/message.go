@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	routeerrs "messagio_testsuite/internal/routes/http/v1/route_errors"
 	"messagio_testsuite/internal/service"
 	serviceerrs "messagio_testsuite/internal/service/service_errors"
@@ -43,9 +44,16 @@ func (r *MessageRoutes) Create(c echo.Context) error {
 
 	id, err := r.MessageService.CreateMessage(c.Request().Context(), req.Message)
 	if err != nil {
-		routeerrs.NewErrorResponse(c, http.StatusInternalServerError, "internal server error")
+		if errors.Is(err, serviceerrs.ErrCannotCreateMessage) {
+			routeerrs.NewErrorResponse(c, http.StatusInternalServerError, "failed to create message")
+		} else if errors.Is(err, serviceerrs.ErrCannotProduceMessage) {
+			routeerrs.NewErrorResponse(c, http.StatusInternalServerError, "failed to produce message to Kafka")
+		} else {
+			routeerrs.NewErrorResponse(c, http.StatusInternalServerError, "internal server error")
+		}
 		return err
 	}
+
 	type response struct {
 		Id uuid.UUID `json:"id"`
 	}

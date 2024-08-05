@@ -22,9 +22,8 @@ func NewMessageRepo(pg *postgres.Postgres) *MessageRepo {
 func (r *MessageRepo) CreateMessage(ctx context.Context, message entity.Message) (uuid.UUID, error) {
 	tx, err := r.Pool.Begin(ctx)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, repoerrs.ErrInsertFailed
 	}
-
 	defer func() {
 		if p := recover(); p != nil {
 			tx.Rollback(ctx)
@@ -40,7 +39,7 @@ func (r *MessageRepo) CreateMessage(ctx context.Context, message entity.Message)
 	var id uuid.UUID
 	err = tx.QueryRow(ctx, query, message.Message).Scan(&id)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, repoerrs.ErrInsertFailed
 	}
 
 	return id, nil

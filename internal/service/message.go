@@ -36,16 +36,23 @@ func (s *MessageService) CreateMessage(ctx context.Context, content string) (uui
 		Message: content,
 	}
 
+	logrus.Infof("Creating message: %s", content)
 	id, err := s.messageRepo.CreateMessage(ctx, message)
 	if err != nil {
-		return uuid.Nil, serviceerrs.ErrCannotCreateMessage
+		if errors.Is(err, repoerrs.ErrInsertFailed) {
+			return uuid.Nil, serviceerrs.ErrCannotCreateMessage
+		}
+		logrus.Errorf("Failed to create message: %v", err)
+		return uuid.Nil, err
 	}
 
 	err = s.kafkaProducer.Produce(ctx, content)
 	if err != nil {
+		logrus.Errorf("Failed to produce message to Kafka: %v", err)
 		return uuid.Nil, serviceerrs.ErrCannotProduceMessage
 	}
 
+	logrus.Infof("Message created with ID: %s", id)
 	return id, nil
 }
 

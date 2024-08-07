@@ -71,17 +71,6 @@ func (s *MessageService) GetMessages(ctx context.Context) ([]entity.Message, err
 	return s.messageRepo.GetMessages(ctx)
 }
 
-func (s *MessageService) GetMessageByContent(ctx context.Context, content string) (entity.Message, error) {
-	message, err := s.messageRepo.GetMessageByContent(ctx, content)
-	if err != nil {
-		if errors.Is(err, repoerrs.ErrNotFound) {
-			return entity.Message{}, serviceerrs.ErrMessageNotFound
-		}
-		return entity.Message{}, err
-	}
-	return message, nil
-}
-
 func (s *MessageService) MarkMessageAsProcessed(ctx context.Context, messageId uuid.UUID) error {
 	return s.messageRepo.MarkMessageAsProcessed(ctx, messageId)
 }
@@ -95,10 +84,16 @@ func (s *MessageService) listenForProcessedMessages() {
 	s.kafkaConsumer.Consume(ctx, s.handleMessage)
 }
 
-func (s *MessageService) handleMessage(ctx context.Context, messageContent string) {
-	message, err := s.GetMessageByContent(ctx, messageContent)
+func (s *MessageService) handleMessage(ctx context.Context, messageIdStr string) {
+	messageId, err := uuid.Parse(messageIdStr)
 	if err != nil {
-		logrus.Errorf("Failed to get message by content: %v", err)
+		logrus.Errorf("Failed to parse message ID: %v", err)
+		return
+	}
+
+	message, err := s.GetMessageById(ctx, messageId)
+	if err != nil {
+		logrus.Errorf("Failed to get message by ID: %v", err)
 		return
 	}
 

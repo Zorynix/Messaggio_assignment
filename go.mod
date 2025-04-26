@@ -102,7 +102,7 @@ require (
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/segmentio/kafka-go v0.4.47
-	github.com/testcontainers/testcontainers-go v0.32.0
+	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	golang.org/x/sys v0.21.0 // indirect
 )

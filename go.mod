@@ -98,7 +98,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx v3.6.2+incompatible
-	github.com/jackc/pgx/v5 v5.6.0
+	github.com/jackc/pgx/v5 v5.7.6
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/segmentio/kafka-go v0.4.47
